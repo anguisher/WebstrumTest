@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+    <name>webstrum</name>
+    <displayName><![CDATA[Webstrum qualification test]]></displayName>
+    <version><![CDATA[1.0.0]]></version>
+    <description><![CDATA[Modulis skirtas Webstrum testui]]></description>
+    <author><![CDATA[Gediminas Bubliauskas]]></author>
+    <tab><![CDATA[front_office_features]]></tab>
+	<confirmUninstall><![CDATA[Ar norite pasalinti si moduli?]]></confirmUninstall>
+    <is_configurable>1</is_configurable>
+    <need_instance>1</need_instance>
+	<limited_countries></limited_countries>
+</module>
