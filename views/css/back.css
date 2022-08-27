@@ -1,0 +1,69 @@
+#webstrumUploadPhoto{
+	transition: 0.3s;
+	cursor: pointer; 
+	border: 1px solid gray; 
+	background-color: #ccc; 
+	height: 90px;
+}
+#webstrumUploadPhoto svg{
+	fill: #eee;
+}
+#webstrumUploadPhoto:hover{
+	background-color: #aaa;
+}
+.webstrumPhotoCol{
+	height: 90px; 
+	background-color: black;
+	position: relative;
+}
+.webstrumPhotoCol img{
+	object-fit: cover;
+	width: 100% !important;
+	height: 100% !important;
+	top: 0;
+	left: 0;
+	position: absolute;
+	z-index: 1 !important;
+}
+.webstrumPhotosRow{
+	border: 1px solid black; 
+	height: 120px; 
+	overflow: auto;
+}
+.webstrumPhotoCol .zoomPhoto{
+	transition: 0.3s;
+	background-color: #00000040;
+	position: absolute;
+	cursor: pointer;
+	top: 0;
+	left: 0;
+	height: 75% !important;
+	width: 100% !important;
+	z-index: 20 !important;
+}
+.webstrumPhotoCol .zoomPhoto:hover{
+	background-color: #00000090;
+}
+.webstrumPhotoCol .deletePhoto{
+	transition: 0.3s;
+	background-color: #ff000040;
+	top: 75%;
+	left: 0;
+	position: absolute;
+	cursor: pointer;
+	height: 25% !important;
+	width: 100% !important;
+	z-index: 20 !important;
+}
+.webstrumPhotoCol .deletePhoto:hover{
+	background-color: #ff000090;
+}
+.webstrumPhotoCol .zoomPhoto svg{
+	fill: #eee;
+}
+.webstrumPhotoCol span{
+	color: white;
+	font-weight: bold;
+	font-size: 24px;
+	line-height: 1;
+}

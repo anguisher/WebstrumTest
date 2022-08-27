@@ -3,11 +3,18 @@
 if (!defined('_PS_VERSION_'))
     exit();
 
+require_once _PS_MODULE_DIR_ . 'webstrum/controllers/front/Helpers/DBHelper.php';
+
 class Webstrum extends Module
 {
-    private $_html = '';
+    private const CONFIG_PHOTOS_LIMIT = 'WEBSTRUM_MAX_PHOTOS_LIMIT';
+    private const CONFIG_MAX_PHOTO_FILE_SIZE = 'WEBSTRUM_MAX_PHOTO_FILE_SIZE';
+    private const PRODUCT_GALLERY_TEMPLATE = '/views/templates/hook/productGallery.tpl';
+    private const ADD_PRODUCT_GALLERY_TEMPLATE = '/views/templates/hook/additionalProductGallery.tpl';
+
     public function __construct()
     {
+        
         $this->name = 'webstrum';
         $this->tab = 'front_office_features';
         $this->version = '1.0.0';
@@ -16,12 +23,11 @@ class Webstrum extends Module
         $this->ps_versions_compliancy = array('min' => '1.7.1.0', 'max' => _PS_VERSION_);
         $this->bootstrap = true;
         $this->controllers = array('apg'); 
-        parent::__construct();
 
         $this->displayName = $this->l('Webstrum qualification test', 'webstrum');
         $this->description = $this->l('Modulis skirtas Webstrum testui', 'webstrum');
-
         $this->confirmUninstall = $this->l('Ar norite pasalinti si moduli?', 'webstrum');
+        parent::__construct();
     }
     public function install()
     {
@@ -31,38 +37,51 @@ class Webstrum extends Module
             && $this->registerHook('displayAdminProductsExtra')
             && $this->registerHook('displayBackOfficeHeader')
             && $this->registerHook('header')
-            && $this->checkDbTable()
             && $this->registerHook('displayProductAdditionalInfo')
+            && $this->prepareConfig()
+            && DBHelper::createDBTable()
             && Configuration::updateValue('webstrum', 'wlsdMpnDBn8');
     }
-
-    public function uninstall()
+    public function prepareConfig(){
+        Configuration::updateValue(self::CONFIG_PHOTOS_LIMIT, 8);
+        Configuration::updateValue(self::CONFIG_MAX_PHOTO_FILE_SIZE, 2048);
+        return true;
+    }
+    public function uninstall() 
     {
         if (!parent::uninstall() || !Configuration::deleteByName('webstrum'))
             return false;
         return true;
     }
     
-
-    private function checkDbTable(){
-        $sql = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'webstrum_gallery_photos` (
-        `id` int(10) NOT NULL AUTO_INCREMENT,
-        `product_id` int(10) NOT NULL,
-        `photo_url` varchar(128) NOT NULL,
-        PRIMARY KEY (`id`)
-        ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8;';
-        $result = Db::getInstance()->execute($sql);
-        return $result;
-    }
-    public function getContent()
+    public function getContent() 
     {
         $output = '';
+        $valid = true;
+        $photosLimit = 0;
+        $maxPhotoFileSize = 0;
         if (Tools::isSubmit('submit' . $this->name)) {
-            $configValue = (string) Tools::getValue('WEBSTRUM_MAX_PHOTOS_LIMIT');
-            if (empty($configValue) || !Validate::isGenericName($configValue)) {
-                $output = $this->displayError($this->l('Invalid Configuration value'));
-            } else {
-                Configuration::updateValue('WEBSTRUM_MAX_PHOTOS_LIMIT', $configValue);
+            $photosLimit = (string) Tools::getValue(self::CONFIG_PHOTOS_LIMIT);
+            $maxPhotoFileSize = (string) Tools::getValue(self::CONFIG_MAX_PHOTO_FILE_SIZE);
+            if (empty($photosLimit)) {
+                $output .= $this->displayError($this->l('Enter max allowed photos limit'));
+                $valid = false;
+            } 
+            if (!Validate::isUnsignedInt($photosLimit)) {
+                $output .= $this->displayError($this->l('Max allowed photos limit must be a number'));
+                $valid = false;
+            } 
+            if (empty($maxPhotoFileSize)) {
+                $output .= $this->displayError($this->l('Enter max photo file size'));
+                $valid = false;
+            } 
+            if (!Validate::isUnsignedInt($maxPhotoFileSize)) {
+                $output .= $this->displayError($this->l('Max photo file size must be a number'));
+                $valid = false;
+            } 
+            if($valid){
+                Configuration::updateValue(self::CONFIG_PHOTOS_LIMIT, $photosLimit);
+                Configuration::updateValue(self::CONFIG_MAX_PHOTO_FILE_SIZE, $maxPhotoFileSize);
                 $output = $this->displayConfirmation($this->l('Settings updated'));
             }
         }
@@ -73,15 +92,23 @@ class Webstrum extends Module
         $form = [
             'form' => [
                 'legend' => [
-                    'title' => $this->l('Settings'),
+                    'title' => $this->l('Webstrum Additional Gallery Settings'),
                 ],
                 'input' => [
                     [
                         'type' => 'text',
                         'label' => $this->l('Max Allowed Photos'),
-                        'name' => 'WEBSTRUM_MAX_PHOTOS_LIMIT',
+                        'name' => self::CONFIG_PHOTOS_LIMIT,
                         'placeholder' => '0',
                         'size' => 2,
+                        'required' => true,
+                    ],
+                    [
+                        'type' => 'text',
+                        'label' => $this->l('Max Photo File Size (kb)'),
+                        'name' => self::CONFIG_MAX_PHOTO_FILE_SIZE,
+                        'placeholder' => '0',
+                        'size' => 10,
                         'required' => true,
                     ],
                 ],
@@ -102,48 +129,47 @@ class Webstrum extends Module
 
         $helper->default_form_language = (int) Configuration::get('PS_LANG_DEFAULT');
 
-        $helper->fields_value['WEBSTRUM_MAX_PHOTOS_LIMIT'] = Tools::getValue('WEBSTRUM_MAX_PHOTOS_LIMIT', Configuration::get('WEBSTRUM_MAX_PHOTOS_LIMIT'));
+        $helper->fields_value[self::CONFIG_PHOTOS_LIMIT] = Tools::getValue(self::CONFIG_PHOTOS_LIMIT, Configuration::get(self::CONFIG_PHOTOS_LIMIT));
+        $helper->fields_value[self::CONFIG_MAX_PHOTO_FILE_SIZE] = Tools::getValue(self::CONFIG_MAX_PHOTO_FILE_SIZE, Configuration::get(self::CONFIG_MAX_PHOTO_FILE_SIZE));
         return $helper->generateForm([$form]);
     }
     public function hookDisplayProductAdditionalInfo($params)
     {
-        $max_photos_limit = Configuration::get('WEBSTRUM_MAX_PHOTOS_LIMIT');
+        $max_photos_limit = Configuration::get(self::CONFIG_PHOTOS_LIMIT);
         $id_product = $params['product']->id;
-        $query = "SELECT `photo_url` FROM "._DB_PREFIX_."webstrum_gallery_photos WHERE `product_id`='".$id_product."'"." LIMIT ".$max_photos_limit;
-        $result = Db::getInstance()->executeS($query);
+        $photos_product = DBHelper::executeS("*", "product_id", $id_product, "", $max_photos_limit);
         $this->context->smarty->assign(array(
              'id_product' => $id_product,
-             'additional_photos' => $result
+             'additional_photos' => $photos_product
          ));
-        if(sizeof($result) > 0)
-            return $this->display(__FILE__, '/views/templates/hook/productGallery.tpl');
+        if(sizeof($photos_product) > 0)
+            return $this->display(__FILE__, self::PRODUCT_GALLERY_TEMPLATE);
     }
     public function hookDisplayBackOfficeHeader(){
-        $this->context->controller->addJquery();
-        $this->context->controller->addJS(array(
-            $this->_path.'views/js/main.js'        
-            ));
-        $this->context->controller->addCSS(array(
-            $this->_path.'views/css/main.css'
-        ));
+        $this->putJsCss("back");
     }
     public function hookHeader(){
+        $this->putJsCss("front");
+    }
+    public function putJsCss($type){
         $this->context->controller->addJquery();
         $this->context->controller->addJS(array(
-            $this->_path.'views/js/main.js'        
+            $this->_path.'views/js/common.js',
+            $this->_path.'views/js/'.$type.'.js'        
             ));
         $this->context->controller->addCSS(array(
-            $this->_path.'views/css/main.css'
+            $this->_path.'views/css/common.css',
+            $this->_path.'views/css/'.$type.'.css'
         ));
     }
     public function hookDisplayAdminProductsExtra($params)
     {
          $id_product = $params['id_product'];
-         $name = Product::getProductName($id_product);
+         $name_product = Product::getProductName($id_product);
          $this->context->smarty->assign(array(
              'id_product' => $id_product,
-             'name_product' => $name
+             'name_product' => $name_product
          ));
-         return $this->display(__FILE__, '/views/templates/hook/additionalProductGallery.tpl');
+         return $this->display(__FILE__, self::ADD_PRODUCT_GALLERY_TEMPLATE);
     }
 }

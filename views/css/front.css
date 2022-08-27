@@ -1,0 +1,17 @@
+.webstrumAdditionalPhotoRow .photoCol{
+	cursor: pointer;
+	transition: 0.3s;
+	height: 80px; 
+	border: 1px solid gray; 
+	margin: 1px;
+}
+.webstrumAdditionalPhotoRow img {
+	object-fit: cover;
+}
+.webstrumAdditionalPhotoRow .photoCol:hover{
+	opacity: 0.7;
+}
+.webstrumAdditionalPhotoRow{
+	height: 120px; 
+	overflow: auto;
+}
