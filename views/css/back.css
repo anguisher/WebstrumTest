@@ -1,12 +1,19 @@
-#webstrumUploadPhoto{
+.webstrumUploadContainer{
 	transition: 0.3s;
 	cursor: pointer; 
 	border: 1px solid gray; 
 	background-color: #ccc; 
 	height: 90px;
+	display: none;
+}
+#webstrumUploadLoader span {
+	color: #fff;
+	font-weight: bold;
 }
 #webstrumUploadPhoto svg{
 	fill: #eee;
+	height: 32px;
+	width: 32px;
 }
 #webstrumUploadPhoto:hover{
 	background-color: #aaa;

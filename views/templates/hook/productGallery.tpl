@@ -4,7 +4,7 @@
 		<div class="row w-100 m-0 webstrumAdditionalPhotoRow">
 			{foreach $additional_photos as $photo}
 				<div class="col-lg-2 p-0 photoCol" photoId="{$photo['id']}">
-					<img src="/img/webstrum/{$photo['photo_url']}" class="h-100 w-100"/>
+					<img src="/img/webstrum/{$photo['product_id']}/thumb-small-{$photo['photo_url']}" photoUrl="/img/webstrum/{$photo['product_id']}/{$photo['photo_url']}" class="h-100 w-100"/>
 				</div>
 			{/foreach }
 		</div>

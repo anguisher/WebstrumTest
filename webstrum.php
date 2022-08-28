@@ -5,6 +5,8 @@ if (!defined('_PS_VERSION_'))
 
 require_once _PS_MODULE_DIR_ . 'webstrum/controllers/front/Helpers/DBHelper.php';
 
+use Symfony\Component\Filesystem\Filesystem;
+
 class Webstrum extends Module
 {
     private const CONFIG_PHOTOS_LIMIT = 'WEBSTRUM_MAX_PHOTOS_LIMIT';
@@ -12,9 +14,10 @@ class Webstrum extends Module
     private const PRODUCT_GALLERY_TEMPLATE = '/views/templates/hook/productGallery.tpl';
     private const ADD_PRODUCT_GALLERY_TEMPLATE = '/views/templates/hook/additionalProductGallery.tpl';
 
+    private $fileSystem;
+
     public function __construct()
     {
-        
         $this->name = 'webstrum';
         $this->tab = 'front_office_features';
         $this->version = '1.0.0';
@@ -23,11 +26,12 @@ class Webstrum extends Module
         $this->ps_versions_compliancy = array('min' => '1.7.1.0', 'max' => _PS_VERSION_);
         $this->bootstrap = true;
         $this->controllers = array('apg'); 
-
+        parent::__construct();
+        $this->filesystem = new Filesystem();
         $this->displayName = $this->l('Webstrum qualification test', 'webstrum');
         $this->description = $this->l('Modulis skirtas Webstrum testui', 'webstrum');
         $this->confirmUninstall = $this->l('Ar norite pasalinti si moduli?', 'webstrum');
-        parent::__construct();
+        
     }
     public function install()
     {
@@ -43,13 +47,17 @@ class Webstrum extends Module
             && Configuration::updateValue('webstrum', 'wlsdMpnDBn8');
     }
     public function prepareConfig(){
-        Configuration::updateValue(self::CONFIG_PHOTOS_LIMIT, 8);
-        Configuration::updateValue(self::CONFIG_MAX_PHOTO_FILE_SIZE, 2048);
-        return true;
+        return Configuration::updateValue(self::CONFIG_PHOTOS_LIMIT, 8)
+            && Configuration::updateValue(self::CONFIG_MAX_PHOTO_FILE_SIZE, 2048);
     }
+    //TODO: Create checkbox on uninstall, so users can choose if they want to delete img folder
     public function uninstall() 
     {
-        if (!parent::uninstall() || !Configuration::deleteByName('webstrum'))
+        if (!parent::uninstall() 
+            || !Configuration::deleteByName('webstrum')
+            || !Configuration::deleteByName(self::CONFIG_PHOTOS_LIMIT)
+            || !Configuration::deleteByName(self::CONFIG_MAX_PHOTO_FILE_SIZE)
+        )
             return false;
         return true;
     }
@@ -82,7 +90,7 @@ class Webstrum extends Module
             if($valid){
                 Configuration::updateValue(self::CONFIG_PHOTOS_LIMIT, $photosLimit);
                 Configuration::updateValue(self::CONFIG_MAX_PHOTO_FILE_SIZE, $maxPhotoFileSize);
-                $output = $this->displayConfirmation($this->l('Settings updated'));
+                $output .= $this->displayConfirmation($this->l('Settings updated'));
             }
         }
         return $output . $this->displayForm();
@@ -97,18 +105,14 @@ class Webstrum extends Module
                 'input' => [
                     [
                         'type' => 'text',
-                        'label' => $this->l('Max Allowed Photos'),
+                        'label' => $this->l('Max allowed photos'),
                         'name' => self::CONFIG_PHOTOS_LIMIT,
-                        'placeholder' => '0',
-                        'size' => 2,
                         'required' => true,
                     ],
                     [
                         'type' => 'text',
-                        'label' => $this->l('Max Photo File Size (kb)'),
+                        'label' => $this->l('Max photo file size (kb)'),
                         'name' => self::CONFIG_MAX_PHOTO_FILE_SIZE,
-                        'placeholder' => '0',
-                        'size' => 10,
                         'required' => true,
                     ],
                 ],
@@ -128,10 +132,13 @@ class Webstrum extends Module
         $helper->submit_action = 'submit' . $this->name;
 
         $helper->default_form_language = (int) Configuration::get('PS_LANG_DEFAULT');
-
-        $helper->fields_value[self::CONFIG_PHOTOS_LIMIT] = Tools::getValue(self::CONFIG_PHOTOS_LIMIT, Configuration::get(self::CONFIG_PHOTOS_LIMIT));
-        $helper->fields_value[self::CONFIG_MAX_PHOTO_FILE_SIZE] = Tools::getValue(self::CONFIG_MAX_PHOTO_FILE_SIZE, Configuration::get(self::CONFIG_MAX_PHOTO_FILE_SIZE));
+        $this->generateFieldsValues($helper, self::CONFIG_PHOTOS_LIMIT);
+        $this->generateFieldsValues($helper, self::CONFIG_MAX_PHOTO_FILE_SIZE);
         return $helper->generateForm([$form]);
+    }
+    private function generateFieldsValues(HelperForm &$helper, string $val)
+    {
+        $helper->fields_value[$val] = Tools::getValue($val, Configuration::get($val));
     }
     public function hookDisplayProductAdditionalInfo($params)
     {
@@ -145,13 +152,16 @@ class Webstrum extends Module
         if(sizeof($photos_product) > 0)
             return $this->display(__FILE__, self::PRODUCT_GALLERY_TEMPLATE);
     }
-    public function hookDisplayBackOfficeHeader(){
+    public function hookDisplayBackOfficeHeader()
+    {
         $this->putJsCss("back");
     }
-    public function hookHeader(){
+    public function hookHeader()
+    {
         $this->putJsCss("front");
     }
-    public function putJsCss($type){
+    public function putJsCss($type)
+    {
         $this->context->controller->addJquery();
         $this->context->controller->addJS(array(
             $this->_path.'views/js/common.js',

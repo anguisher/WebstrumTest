@@ -30,7 +30,8 @@ class DBHelper
     }
     public static function delete($from, $what)
     {
-    	Db::getInstance()->delete(self::WEBSTRUM_TABLE_NAME, $from.' = '.$what); 
+        Db::getInstance()->delete(self::WEBSTRUM_TABLE_NAME, $from.' = '.$what);    
+    	
     }
     public static function createDBTable()
     {
